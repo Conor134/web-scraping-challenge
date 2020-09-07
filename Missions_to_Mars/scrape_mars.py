@@ -3,29 +3,36 @@ from splinter import Browser
 from bs4 import BeautifulSoup
 from webdriver_manager.chrome import ChromeDriverManager
 import pandas as pd
+import time
 
-# initialise browser
-executable_path = {'executable_path': ChromeDriverManager().install()}
-browser = Browser('chrome', **executable_path, headless=False)
-
+def init_browser():
+    # @NOTE: Replace the path with your actual path to the chromedriver
+    executable_path = {'executable_path':ChromeDriverManager().install()}
+    return Browser("chrome", **executable_path, headless=False)
 
 def scrape():
+    browser = init_browser()
+
     final_mars_data = {}
 
     # NASA News
     news_url = 'https://mars.nasa.gov/news/'
     browser.visit(news_url)
+
+    time.sleep(5)
     # HTML object
     html = browser.html
     # Parse HTML with Beautiful Soup
     news_soup = BeautifulSoup(html, 'html.parser')
     # Retrieve all elements that contain book information
-    news_title = news_soup.find_all('div', class_='content_title')[1].text
+    news_title = news_soup.find_all('div', class_='content_title')[1].text.strip()
     news_p = news_soup.find_all('div', class_='article_teaser_body')[0].text
 
     ## JPL Mars Space Images - Featured Image
+    browser = init_browser()
     jpl_url = 'https://www.jpl.nasa.gov/spaceimages/?search=&category=Mars'
     browser.visit(jpl_url)
+    time.sleep(5)
 
     # Click on 'FULL IMAGE'
     browser.click_link_by_partial_text('FULL IMAGE')
@@ -55,9 +62,11 @@ def scrape():
     mars_data_df = tables[0]
     mars_data_df.columns = ['Description', 'Value']
     mars_data_df.set_index('Description', inplace=True)
-    mars_html_table = mars_data_df.to_html('table.html')
+    mars_html_table = mars_data_df.to_html()
 
     ## Mars Hemispheres
+    hemispheres_url = "https://astrogeology.usgs.gov/search/results?q=hemisphere+enhanced&k1=target&v1=Mars"
+
     browser.visit(hemispheres_url)
     html = browser.html
 
@@ -94,12 +103,12 @@ def scrape():
     "news_title": news_title,
     "news_paragraph": news_p,
     "featured_image_url": featured_image_url,
-    "mars_facts": mars_data_df,
+    "mars_facts": mars_html_table,
     "hemisphere_image_urls": hemisphere_image_urls
     }
 
     # Close the browser after scraping
     browser.quit()
-
+    
     # Return results
     return final_mars_data  
